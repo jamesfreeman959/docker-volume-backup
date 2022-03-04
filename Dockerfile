@@ -1,7 +1,7 @@
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 
-RUN apt-get update \
- && apt-get install -y --no-install-recommends curl cron ca-certificates openssh-client iputils-ping unzip \
+RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common && add-apt-repository ppa:costamagnagianfranco/borgbackup && apt-get update \
+ && apt-get install -y --no-install-recommends curl cron ca-certificates openssh-client iputils-ping unzip borgbackup \
  && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install awscliv2 https://docs.aws.amazon.com/cli/latest/userguide/install-cliv2-linux.html
@@ -15,8 +15,8 @@ RUN if [ $(uname -m) = "aarch64" ] || [ $(uname -m) = "x86_64" ] ; then curl -sS
 # b) Borrow it from Official Docker container
 COPY --from=docker:latest /usr/local/bin/docker /usr/local/bin/
 
-COPY ./src/entrypoint.sh ./src/backup.sh /root/
-RUN chmod a+x /root/entrypoint.sh /root/backup.sh
+COPY ./src/entrypoint.sh ./src/backup.sh ./src/backup-borg.sh /root/
+RUN chmod a+x /root/entrypoint.sh /root/backup.sh /root/backup-borg.sh
 
 WORKDIR /root
 CMD [ "/root/entrypoint.sh" ]

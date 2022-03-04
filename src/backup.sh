@@ -67,18 +67,23 @@ if [ ! -z "$PRE_BACKUP_COMMAND" ]; then
   eval $PRE_BACKUP_COMMAND
 fi
 
-info "Creating backup"
-BACKUP_FILENAME="$(date +"${BACKUP_FILENAME:-backup-%Y-%m-%dT%H-%M-%S.tar.gz}")"
-TIME_BACK_UP="$(date +%s.%N)"
-tar -czvf "$BACKUP_FILENAME" $BACKUP_SOURCES # allow the var to expand, in case we have multiple sources
-BACKUP_SIZE="$(du --bytes $BACKUP_FILENAME | sed 's/\s.*$//')"
-TIME_BACKED_UP="$(date +%s.%N)"
+if [ ! -z "USE_BORG" ]; then
+  info "Calling Borg backup script..."
+  ./backup-borg.sh
+else
+  info "Creating backup"
+  BACKUP_FILENAME="$(date +"${BACKUP_FILENAME:-backup-%Y-%m-%dT%H-%M-%S.tar.gz}")"
+  TIME_BACK_UP="$(date +%s.%N)"
+  tar -czvf "$BACKUP_FILENAME" $BACKUP_SOURCES # allow the var to expand, in case we have multiple sources
+  BACKUP_SIZE="$(du --bytes $BACKUP_FILENAME | sed 's/\s.*$//')"
+  TIME_BACKED_UP="$(date +%s.%N)"
 
-if [ ! -z "$GPG_PASSPHRASE" ]; then
-  info "Encrypting backup"
-  gpg --symmetric --cipher-algo aes256 --batch --passphrase "$GPG_PASSPHRASE" -o "${BACKUP_FILENAME}.gpg" $BACKUP_FILENAME
-  rm $BACKUP_FILENAME
-  BACKUP_FILENAME="${BACKUP_FILENAME}.gpg"
+  if [ ! -z "$GPG_PASSPHRASE" ]; then
+    info "Encrypting backup"
+    gpg --symmetric --cipher-algo aes256 --batch --passphrase "$GPG_PASSPHRASE" -o "${BACKUP_FILENAME}.gpg" $BACKUP_FILENAME
+    rm $BACKUP_FILENAME
+    BACKUP_FILENAME="${BACKUP_FILENAME}.gpg"
+  fi
 fi
 
 if [ -S "$DOCKER_SOCK" ]; then
