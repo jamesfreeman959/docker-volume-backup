@@ -26,6 +26,7 @@ fi
 info "Backup starting"
 TIME_START="$(date +%s.%N)"
 DOCKER_SOCK="/var/run/docker.sock"
+DOCKER_BIN="/usr/local/bin/docker"
 
 if [ ! -z "$BACKUP_CUSTOM_LABEL" ]; then
   CUSTOM_LABEL="--filter label=$BACKUP_CUSTOM_LABEL"
@@ -33,10 +34,10 @@ fi
 
 if [ -S "$DOCKER_SOCK" ]; then
   TEMPFILE="$(mktemp)"
-  docker ps --format "{{.ID}}" --filter "label=docker-volume-backup.stop-during-backup=true" $CUSTOM_LABEL > "$TEMPFILE"
+  $DOCKER_BIN ps --format "{{.ID}}" --filter "label=docker-volume-backup.stop-during-backup=true" $CUSTOM_LABEL > "$TEMPFILE"
   CONTAINERS_TO_STOP="$(cat $TEMPFILE | tr '\n' ' ')"
   CONTAINERS_TO_STOP_TOTAL="$(cat $TEMPFILE | wc -l)"
-  CONTAINERS_TOTAL="$(docker ps --format "{{.ID}}" | wc -l)"
+  CONTAINERS_TOTAL="$($DOCKER_BIN ps --format "{{.ID}}" | wc -l)"
   rm "$TEMPFILE"
   echo "$CONTAINERS_TOTAL containers running on host in total"
   echo "$CONTAINERS_TO_STOP_TOTAL containers marked to be stopped during backup"
@@ -48,16 +49,16 @@ fi
 
 if [ "$CONTAINERS_TO_STOP_TOTAL" != "0" ]; then
   info "Stopping containers"
-  docker stop $CONTAINERS_TO_STOP
+  $DOCKER_BIN stop $CONTAINERS_TO_STOP
 fi
 
 if [ -S "$DOCKER_SOCK" ]; then
-  for id in $(docker ps --filter label=docker-volume-backup.exec-pre-backup $CUSTOM_LABEL --format '{{.ID}}'); do
-    name="$(docker ps --filter id=$id --format '{{.Names}}')"
-    cmd="$(docker ps --filter id=$id --format '{{.Label "docker-volume-backup.exec-pre-backup"}}')"
+  for id in $($DOCKER_BIN ps --filter label=docker-volume-backup.exec-pre-backup $CUSTOM_LABEL --format '{{.ID}}'); do
+    name="$($DOCKER_BIN ps --filter id=$id --format '{{.Names}}')"
+    cmd="$($DOCKER_BIN ps --filter id=$id --format '{{.Label "docker-volume-backup.exec-pre-backup"}}')"
     info "Pre-exec command for: $name"
-    echo docker exec $id $cmd # echo the command we're using, for debuggability
-    eval docker exec $id $cmd
+    echo $DOCKER_BIN exec $id $cmd # echo the command we're using, for debuggability
+    eval $DOCKER_BIN exec $id $cmd
   done
 fi
 
@@ -87,18 +88,18 @@ else
 fi
 
 if [ -S "$DOCKER_SOCK" ]; then
-  for id in $(docker ps --filter label=docker-volume-backup.exec-post-backup $CUSTOM_LABEL --format '{{.ID}}'); do
-    name="$(docker ps --filter id=$id --format '{{.Names}}')"
-    cmd="$(docker ps --filter id=$id --format '{{.Label "docker-volume-backup.exec-post-backup"}}')"
+  for id in $($DOCKER_BIN ps --filter label=docker-volume-backup.exec-post-backup $CUSTOM_LABEL --format '{{.ID}}'); do
+    name="$($DOCKER_BIN ps --filter id=$id --format '{{.Names}}')"
+    cmd="$($DOCKER_BIN ps --filter id=$id --format '{{.Label "docker-volume-backup.exec-post-backup"}}')"
     info "Post-exec command for: $name"
-    echo docker exec $id $cmd # echo the command we're using, for debuggability
-    eval docker exec $id $cmd
+    echo $DOCKER_BIN exec $id $cmd # echo the command we're using, for debuggability
+    eval $DOCKER_BIN exec $id $cmd
   done
 fi
 
 if [ "$CONTAINERS_TO_STOP_TOTAL" != "0" ]; then
   info "Starting containers back up"
-  docker start $CONTAINERS_TO_STOP
+  $DOCKER_BIN start $CONTAINERS_TO_STOP
 fi
 
 info "Waiting before processing"

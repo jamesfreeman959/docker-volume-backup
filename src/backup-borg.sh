@@ -76,6 +76,8 @@ BORG_ARCHIVE_FOLDER=$BORG_REPO/$BACKUP_FILENAME
 
 # Borg init options
 #export BORG_PASSPHRASE="{{ borg_passphrase }}"
+export BORG_PASSPHRASE="$BORG_PASSPHRASE"
+
 #BORG_INIT_OPTIONS="--make-parent-dirs --encryption=repokey-blake2"
 
 # How long to keep borg archives
@@ -93,7 +95,7 @@ CHECK_DOW="Friday"
 # Which week in the month to perform the full check.  Put any number(s) 1-5.
 CHECK_WEEKS="12345"
 # Send email of check results?
-EMAIL_CHECK_RESULTS="yes"
+EMAIL_CHECK_RESULTS="no"
 # Borg check options
 BORG_CHECK_OPTIONS=""
 
@@ -110,8 +112,8 @@ BORG_CHECK_OPTIONS=""
 
 # Check to see if the borg repo is using ssh and test connection.
 echo "$BORG_REPO" | grep "ssh://" > /dev/null
-RETVAL=$?
-if [ "$RETVAL" -eq "0" -a "$BORG_SSH_SERVER" != "" ] 
+SSHRETVAL=$?
+if [ "$SSHRETVAL" -eq "0" -a "$BORG_SSH_SERVER" != "" ] 
 then
 	if [ "$BORG_RSH" == "" ]
 	then
@@ -157,6 +159,15 @@ then
 	then
 		echo "Checking borg repository $BORG_REPO/$BACKUP_FILENAME:" >> $CHECK_RESULTS_FILE
 		borg --verbose check $BORG_GLOBAL_OPTIONS $BORG_CHECK_OPTIONS $BORG_REPO/$BACKUP_FILENAME >> $CHECK_RESULTS_FILE 2>&1
+
+		echo "Copying check results to target directory" >> $CHECK_RESULTS_FILE
+                if [ "$SSHRETVAL" -eq "0" -a "$BORG_SSH_SERVER" != "" ]
+                then
+                    cat $CHECK_RESULTS_FILE | $BORG_RSH $BORG_SSH_SERVER "cat > $BORG_LOCAL_PATH/$BACKUP_FILENAME/checkresults.txt" > /dev/null 2>&1
+                else
+                    cat $CHECK_RESULTS_FILE > $BORG_LOCAL_PATH/$BACKUP_FILENAME/checkresults.txt
+                fi
+
 		if [ "$?" -ne "0" ]
 		then
 			echo "Errors found in $BORG_REPO/$BACKUP_FILENAME repository!" >> $CHECK_RESULTS_FILE
@@ -306,6 +317,17 @@ Host:       $HOST
 Domains:    ${SRC_PATHS//$'\n'/ }
 
 $(cat $SUMMARY_FILE)\n"
+fi
+
+# Rebuild the summary file with all backup info for the final step
+borg info $BORG_GLOBAL_OPTIONS --last 1 $BORG_ARCHIVE_FOLDER > $SUMMARY_FILE
+
+echo "Copying info to target directory" >> $LOG
+if [ "$SSHRETVAL" -eq "0" -a "$BORG_SSH_SERVER" != "" ]
+then
+        cat $SUMMARY_FILE | $BORG_RSH $BORG_SSH_SERVER "cat > $BORG_LOCAL_PATH/$BACKUP_FILENAME/info.txt" > /dev/null 2>&1
+else
+        cat $SUMMARY_FILE > $BORG_LOCAL_PATH/$BACKUP_FILENAME/info.txt
 fi
 
 # Remove temp files
