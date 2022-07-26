@@ -126,7 +126,7 @@ then
 Host:       $HOST
 Command:    ssh -oBatchMode=yes $BORG_SSH_SERVER ls" | mail -s "$SHCMD ssh connection failed" $EMAIL_RECIPIENT
 			echo $ERR
-			exit 1
+			#exit 1
 		fi
 	else
 		$BORG_RSH $BORG_SSH_SERVER ls > /dev/null 2>&1
@@ -138,7 +138,7 @@ Command:    ssh -oBatchMode=yes $BORG_SSH_SERVER ls" | mail -s "$SHCMD ssh conne
 Host:       $HOST
 Command:    ssh -oBatchMode=yes $BORG_SSH_SERVER ls" | mail -s "$SHCMD ssh connection failed" $EMAIL_RECIPIENT
 	        echo $ERR
-        	exit 1
+        	#exit 1
         	fi
 	fi
 fi
@@ -333,5 +333,6 @@ fi
 # Remove temp files
 rm -f $SUMMARY_FILE $CHECK_RESULTS_FILE
 
-exit $ERRORED
+#exit $ERRORED
+exit 0
 
