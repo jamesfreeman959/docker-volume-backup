@@ -32,9 +32,15 @@ if [ ! -z "$BACKUP_CUSTOM_LABEL" ]; then
   CUSTOM_LABEL="--filter label=$BACKUP_CUSTOM_LABEL"
 fi
 
+# Grab the Swarm namespace if applicable
+NAMESPACE=$($DOCKER_BIN inspect $(hostname) --format '{{index .Config.Labels "com.docker.stack.namespace" }}' 2>/dev/null)
+if [ "x$NAMESPACE" != "x" ]; then
+  NAMESPACE_FILTER="--filter name=${NAMESPACE}_"
+fi
+
 if [ -S "$DOCKER_SOCK" ]; then
   TEMPFILE="$(mktemp)"
-  $DOCKER_BIN ps --format "{{.ID}}" --filter "label=docker-volume-backup.stop-during-backup=true" $CUSTOM_LABEL > "$TEMPFILE"
+  $DOCKER_BIN ps --format "{{.ID}}" --filter "label=docker-volume-backup.stop-during-backup=true" $NAMESPACE_FILTER $CUSTOM_LABEL > "$TEMPFILE"
   CONTAINERS_TO_STOP="$(cat $TEMPFILE | tr '\n' ' ')"
   CONTAINERS_TO_STOP_TOTAL="$(cat $TEMPFILE | wc -l)"
   CONTAINERS_TOTAL="$($DOCKER_BIN ps --format "{{.ID}}" | wc -l)"
@@ -53,7 +59,7 @@ if [ "$CONTAINERS_TO_STOP_TOTAL" != "0" ]; then
 fi
 
 if [ -S "$DOCKER_SOCK" ]; then
-  for id in $($DOCKER_BIN ps --filter label=docker-volume-backup.exec-pre-backup $CUSTOM_LABEL --format '{{.ID}}'); do
+  for id in $($DOCKER_BIN ps --filter label=docker-volume-backup.exec-pre-backup $NAMESPACE_FILTER $CUSTOM_LABEL --format '{{.ID}}'); do
     name="$($DOCKER_BIN ps --filter id=$id --format '{{.Names}}')"
     cmd="$($DOCKER_BIN ps --filter id=$id --format '{{.Label "docker-volume-backup.exec-pre-backup"}}')"
     info "Pre-exec command for: $name"
@@ -88,7 +94,7 @@ else
 fi
 
 if [ -S "$DOCKER_SOCK" ]; then
-  for id in $($DOCKER_BIN ps --filter label=docker-volume-backup.exec-post-backup $CUSTOM_LABEL --format '{{.ID}}'); do
+  for id in $($DOCKER_BIN ps --filter label=docker-volume-backup.exec-post-backup $NAMESPACE_FILTER $CUSTOM_LABEL --format '{{.ID}}'); do
     name="$($DOCKER_BIN ps --filter id=$id --format '{{.Names}}')"
     cmd="$($DOCKER_BIN ps --filter id=$id --format '{{.Label "docker-volume-backup.exec-post-backup"}}')"
     info "Post-exec command for: $name"
