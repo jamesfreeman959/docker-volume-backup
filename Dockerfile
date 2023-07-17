@@ -1,6 +1,6 @@
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 
-RUN apt-get update && apt-get install -y --no-install-recommends software-properties-common && add-apt-repository ppa:costamagnagianfranco/borgbackup && apt-get update \
+RUN apt-get update && apt-get install -y --no-install-recommends gpg-agent software-properties-common && add-apt-repository ppa:costamagnagianfranco/borgbackup && apt-get update \
  && apt-get install -y --no-install-recommends curl cron ca-certificates openssh-client iputils-ping unzip borgbackup \
  && apt-get clean && rm -rf /var/lib/apt/lists/*
 
