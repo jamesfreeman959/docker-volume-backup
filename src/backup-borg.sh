@@ -288,6 +288,23 @@ Logfile:  $LOG
 Command:  $CMD" | mail -s "$SHCMD borg prune failed" $EMAIL_RECIPIENT
                         echo $ERR
                 fi
+
+                # Compact  borg archives
+                echo -e "\nCompact borg archives" >> $LOG
+                CMD="borg compact $BORG_GLOBAL_OPTIONS $BORG_ARCHIVE_FOLDER >> $LOG 2>&1"
+                echo "Command: $CMD" | sed 's/BORG_PASSPHRASE=\S*/BORG_PASSPHRASE=xxxxxxxx/g' >> $LOG
+                eval "$CMD"
+                if [ "$?" -ne "0" ]
+                then
+                        ERR="$SHCMD: Error!  Failed compacting borg archive for $DOMAIN"
+                        echo $ERR >> $LOG
+                        echo "$ERR
+Host:     $HOST
+Domain:   $DOMAIN
+Logfile:  $LOG
+Command:  $CMD" | mail -s "$SHCMD borg compact failed" $EMAIL_RECIPIENT
+                        echo $ERR
+                fi
 	fi
 
         echo "---- Backup done $DOMAIN ---- $(date +'%d-%m-%Y %H:%M:%S') ----" >> $LOG
